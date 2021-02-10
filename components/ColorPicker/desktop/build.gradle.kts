@@ -17,8 +17,8 @@ kotlin {
     }
 }
 
-//compose.desktop {
-//    application {
-//        mainClass = "org.jetbrains.compose.splitpane.demo.MainKt"
-//    }
-//}
+compose.desktop {
+    application {
+        mainClass = "org.jetbrains.compose.colorpicker.demo.MainKt"
+    }
+}
