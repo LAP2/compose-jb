@@ -1,13 +1,16 @@
 package org.jetbrains.compose.splitpane
 
 import androidx.compose.foundation.InteractionState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.consumeAllChanges
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.movable.SplitPaneState
+import org.jetbrains.compose.movable.SplitterState
 
 interface SplitPaneScope {
 
@@ -18,15 +21,51 @@ interface SplitPaneScope {
 
     fun second(
         minSize: Dp = 0.dp,
-        content: @Composable () -> Unit = { Box(
-            Modifier
-                .fillMaxSize()
-        )
-        }
+        content: @Composable () -> Unit
+    )
+
+    fun splitter(
+        block: SplitterScope.() -> Unit
     )
 }
 
-internal class Betrayer : SplitPaneScope {
+interface SplitterScope {
+    val isHorizontal: Boolean
+    fun Modifier.markAsHandle(): Modifier
+    fun content(content: @Composable () -> Unit)
+}
+
+internal class SplitterScopeImpl(
+    override val isHorizontal: Boolean,
+    private val splitPaneState: SplitPaneState
+) : SplitterScope {
+
+    internal var splitter: ComposableSlot? = null
+        private set
+
+    override fun Modifier.markAsHandle(): Modifier =
+        this.pointerInput(splitPaneState.splitterState) {
+            detectDragGestures { change, _ ->
+                change.consumeAllChanges()
+                splitPaneState.splitterState.dispatchRawMovement(
+                    if (isHorizontal) change.position.x else change.position.y
+                )
+            }
+        }
+
+    override fun content(
+        content: @Composable () -> Unit
+    ) {
+        splitter = content
+    }
+}
+
+private typealias ComposableSlot = @Composable () -> Unit
+
+internal class SplitPaneScopeImpl(
+    private val isHorizontal: Boolean,
+    private val splitPaneState: SplitPaneState
+) : SplitPaneScope {
 
     private var firstPlaceableMinimalSize: Dp = 0.dp
     private var secondPlaceableMinimalSize: Dp = 0.dp
@@ -34,8 +73,12 @@ internal class Betrayer : SplitPaneScope {
     internal val minimalSizes: MinimalSizes
         get() = MinimalSizes(firstPlaceableMinimalSize, secondPlaceableMinimalSize)
 
-    internal lateinit var firstPlaceableContent: @Composable () -> Unit
-    internal lateinit var secondPlaceableContent: @Composable () -> Unit
+    internal var firstPlaceableContent: ComposableSlot? = null
+        private set
+    internal var secondPlaceableContent: ComposableSlot? = null
+        private set
+    internal var splitter: ComposableSlot? = null
+        private set
 
         override fun first(
             minSize: Dp,
@@ -53,17 +96,33 @@ internal class Betrayer : SplitPaneScope {
             secondPlaceableContent = content
         }
 
+    override fun splitter(
+        block: SplitterScope.() -> Unit
+    ) {
+        SplitterScopeImpl(
+            isHorizontal,
+            splitPaneState
+        ).apply {
+            block()
+            this@SplitPaneScopeImpl.splitter = splitter
+        }
+
+    }
 }
 
 @Composable
-fun rememberSplitterState(
+fun rememberSplitPaneState(
     initial: Dp = 0.dp,
-    interactionState: InteractionState? = null
-): SplitterState {
+    moveEnabled: Boolean = true,
+    interactionState: InteractionState = InteractionState()
+): SplitPaneState {
     return remember {
-        SplitterState(
-            initial = initial.value,
-            interactionState = interactionState
+        SplitPaneState(
+            SplitterState(
+                initialPosition = initial.value,
+                interactionState = interactionState
+            ),
+            enabled = moveEnabled
         )
     }
 }
