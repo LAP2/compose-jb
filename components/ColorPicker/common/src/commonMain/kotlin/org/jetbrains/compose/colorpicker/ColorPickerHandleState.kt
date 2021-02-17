@@ -1,6 +1,8 @@
 package org.jetbrains.compose.colorpicker
 
 import androidx.compose.foundation.MutatePriority
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import org.jetbrains.compose.movable.TwoDirectionsMovable
 import org.jetbrains.compose.movable.TwoDirectionsMoveScope
 import org.jetbrains.compose.movable.movableState
@@ -31,6 +33,17 @@ class ColorPickerHandleState : TwoDirectionsMovable {
 
     override val isMoveInProgress: Boolean = twoDirectionsMovableState.isMoveInProgress
 
+}
+
+fun Modifier.layoutHandle(
+    state: ColorPickerHandleState
+) = layout { measurable, constraints ->
+
+
+
+    layout(constraints.maxWidth, constraints.maxHeight) {
+
+    }
 
 
 }
