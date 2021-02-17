@@ -30,6 +30,16 @@ packaging JDK 14 or later must be used.
 
 ![Create new project 3](screen5.png)
 
+### Update the wizard plugin
+
+The Сompose plugin version used in the wizard above may be not the last. Update the version of the plugin to the latest available by editing the `build.gradle.kts` file, finding and updating the version information as shown below. In this example the latest version of the plugin was 0.3.0-build152 and a compatible version of kotlin was 1.4.30. For the latest versions, see the [latest versins](https://github.com/JetBrains/compose-jb/tags) site and the [Kotlin](https://kotlinlang.org/) site.
+```
+plugins {
+    kotlin("jvm") version "1.4.30"
+    id("org.jetbrains.compose") version "0.3.0-build152"
+}
+```
+
 ### Create new Compose project without the wizard
 
 It is also possible to create Compose project manually.

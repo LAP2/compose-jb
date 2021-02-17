@@ -9,7 +9,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import example.imageviewer.style.Transparent
 
-// TODO fix, it doesn't work
 @Composable
 fun Scalable(
     onScale: ScaleHandler,
@@ -18,7 +17,7 @@ fun Scalable(
 ) {
     Surface(
         color = Transparent,
-        modifier = modifier.pointerInput {
+        modifier = modifier.pointerInput(Unit) {
             detectTapGestures(onDoubleTap = { onScale.resetFactor() })
             detectTransformGestures { _, _, zoom, _ ->
                 onScale.onScale(zoom)
