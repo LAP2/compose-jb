@@ -2,6 +2,7 @@ package org.jetbrains.compose.splitpane
 
 import androidx.compose.desktop.LocalAppWindow
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,11 +17,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.consumeAllChanges
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerMoveFilter
 import androidx.compose.ui.unit.dp
 import java.awt.Cursor
 
-internal fun Modifier.cursorForResize(
+private fun Modifier.cursorForHorizontalResize(
     isHorizontal: Boolean
 ): Modifier = composed {
     var isHover by remember { mutableStateOf(false) }
@@ -45,10 +48,10 @@ private fun DesktopSplitPaneSeparator(
 ) = Box(
     Modifier
         .run {
-            if (isHorizontal){
+            if (isHorizontal) {
                 this.width(1.dp)
                     .fillMaxHeight()
-            } else{
+            } else {
                 this.height(1.dp)
                     .fillMaxWidth()
             }
@@ -57,32 +60,40 @@ private fun DesktopSplitPaneSeparator(
 )
 
 @Composable
-internal actual fun Splitter(
+private fun DesctopHandle(
     isHorizontal: Boolean,
     splitPaneState: SplitPaneState
-) {
-    SplitterScopeImpl(
-        isHorizontal,
-        splitPaneState
-    ).apply {
-        content {
-            if (splitPaneState.moveEnabled) {
-                Box(
-                    Modifier
-                        .markAsHandle()
-                        .cursorForResize(isHorizontal)
-                        .run {
-                            if (isHorizontal) {
-                                this.width(8.dp)
-                                    .fillMaxHeight()
-                            } else {
-                                this.height(8.dp)
-                                    .fillMaxWidth()
-                            }
-                        }
+) = Box(
+    Modifier
+        .pointerInput(splitPaneState) {
+            detectDragGestures { change, _ ->
+                change.consumeAllChanges()
+                splitPaneState.dispatchRawMovement(
+                    if (isHorizontal) change.position.x else change.position.y
                 )
             }
-            DesktopSplitPaneSeparator(isHorizontal)
         }
-    }.splitter?.invoke()
-}
+        .cursorForHorizontalResize(isHorizontal)
+        .run {
+            if (isHorizontal) {
+                this.width(8.dp)
+                    .fillMaxHeight()
+            } else {
+                this.height(8.dp)
+                    .fillMaxWidth()
+            }
+        }
+)
+
+internal actual fun defaultSplitter(
+    isHorizontal: Boolean,
+    splitPaneState: SplitPaneState
+): Splitter = Splitter(
+    measuredPart = {
+        DesktopSplitPaneSeparator(isHorizontal)
+    },
+    handlePart = {
+        DesctopHandle(isHorizontal, splitPaneState)
+    }
+)
+

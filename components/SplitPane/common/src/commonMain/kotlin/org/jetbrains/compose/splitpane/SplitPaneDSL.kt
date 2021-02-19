@@ -39,70 +39,80 @@ interface SplitPaneScope {
         content: @Composable () -> Unit
     )
 
+    fun splitter(block: SplitterScope.() -> Unit)
+
+}
+
+/** Receiver scope which is used by [SplitterScope] */
+interface HandleScope {
+    /** allow mark composable as movable handle */
+    fun Modifier.markAsHandle(): Modifier
+}
+
+/** Receiver scope which is used by [SplitPaneScope] */
+interface SplitterScope {
     /**
-     * Set up splitter that will split first and second parts of split pane.
-     * By default for [HorizontalSplitPane] it will be vertical line that divides available width in some place.
-     * For [VerticalSplitPane] it wil be horizontal line that divides available heights in some place.
-     * @param block specify configuration lambda for [SplitterScope] receiver
-     * which wil allow to configure custom composable for splitter and move handle
+     * Set up visible part of splitter. This part will be measured and placed between split pane
+     * parts (first and second)
+     *
+     * @param content composable item content
      * */
-    fun splitter(
-        block: SplitterScope.() -> Unit
+    fun visiblePart(content: @Composable () -> Unit)
+
+    /**
+     * Set up handle part, this part of splitter would be measured and placed above [visiblePart] content.
+     * Size of handle will have no effect on split pane parts (first and second) sizes.
+     *
+     * @param alignment alignment of handle according to [visiblePart] could be:
+     * * [SplitterHandleAlign.BEFORE] if you place handle before [visiblePart],
+     * * [SplitterHandleAlign.ABOVE] if you place handle above [visiblePart] (will be centred)
+     * * and [SplitterHandleAlign.AFTER] if you place handle after [visiblePart].
+     *
+     * @param content composable item content provider. Uses [HandleScope] to allow mark any provided composable part
+     * as handle.
+     * [content] will be placed only if [SplitPaneState.moveEnabled] is true
+     */
+    fun handle(
+        alignment: SplitterHandleAlign = SplitterHandleAlign.ABOVE,
+        content: HandleScope.() -> @Composable () -> Unit
     )
 }
 
-/** Receiver scope which is used by [HorizontalSplitPane] and [VerticalSplitPane] by [SplitPaneScope] */
-interface SplitterScope {
-
-    /**
-     * Value provided into composable configurations.
-     * It will allow to check if configure custom splitter for [HorizontalSplitPane] or [VerticalSplitPane]
-     * */
-    val isHorizontal: Boolean
-
-    /**
-     * [Modifier] extension function that will allow to mark any composable configured inside
-     * [SplitterScope] as move handle.
-     * That will allow use them to move splitter along split pane direction.
-     * */
-    fun Modifier.markAsHandle(): Modifier
-
-    /**
-     * Set up composable content for custom splitter.
-     * */
-    fun content(content: @Composable () -> Unit)
+internal class HandleScopeImpl(
+    private val containerScope: SplitPaneScopeImpl
+) : HandleScope {
+    override fun Modifier.markAsHandle(): Modifier = this.pointerInput(containerScope.splitPaneState) {
+        detectDragGestures { change, _ ->
+            change.consumeAllChanges()
+            containerScope.splitPaneState.dispatchRawMovement(
+                if (containerScope.isHorizontal) change.position.x else change.position.y
+            )
+        }
+    }
 }
 
 internal class SplitterScopeImpl(
-    override val isHorizontal: Boolean,
-    private val splitPaneState: SplitPaneState
+    private val containerScope: SplitPaneScopeImpl
 ) : SplitterScope {
 
-    internal var splitter: ComposableSlot? = null
-        private set
+    override fun visiblePart(content: @Composable () -> Unit) {
+        containerScope.visiblePart = content
+    }
 
-    override fun Modifier.markAsHandle(): Modifier =
-        this.pointerInput(splitPaneState.splitterState) {
-            detectDragGestures { change, _ ->
-                change.consumeAllChanges()
-                splitPaneState.splitterState.dispatchRawMovement(
-                    if (isHorizontal) change.position.x else change.position.y
-                )
-            }
-        }
-
-    override fun content(
-        content: @Composable () -> Unit
+    override fun handle(
+        alignment: SplitterHandleAlign,
+        content: HandleScope.() -> @Composable () -> Unit
     ) {
-        splitter = content
+        containerScope.handle = HandleScopeImpl(containerScope).content()
+        containerScope.alignment = alignment
     }
 }
 
 private typealias ComposableSlot = @Composable () -> Unit
 
 internal class SplitPaneScopeImpl(
-    private val isHorizontal: Boolean,
-    private val splitPaneState: SplitPaneState
+    internal val isHorizontal: Boolean,
+    internal val splitPaneState: SplitPaneState
 ) : SplitPaneScope {
 
     private var firstPlaceableMinimalSize: Dp = 0.dp
@@ -115,36 +125,36 @@ internal class SplitPaneScopeImpl(
         private set
     internal var secondPlaceableContent: ComposableSlot? = null
         private set
-    internal var splitter: ComposableSlot? = null
-        private set
 
-        override fun first(
-            minSize: Dp,
-            content: @Composable () -> Unit
-        ) {
-            firstPlaceableMinimalSize = minSize
-            firstPlaceableContent = content
-        }
+    internal lateinit var visiblePart: ComposableSlot
+    internal lateinit var handle: ComposableSlot
+    internal var alignment: SplitterHandleAlign = SplitterHandleAlign.ABOVE
+    internal val splitter
+        get() =
+            if (this::visiblePart.isInitialized && this::handle.isInitialized) {
+                Splitter(visiblePart, handle, alignment)
+            } else {
+                defaultSplitter(isHorizontal, splitPaneState)
+            }
 
-        override fun second(
-            minSize: Dp,
-            content: @Composable () -> Unit
-        ) {
-            secondPlaceableMinimalSize = minSize
-            secondPlaceableContent = content
-        }
-
-    override fun splitter(
-        block: SplitterScope.() -> Unit
+    override fun first(
+        minSize: Dp,
+        content: @Composable () -> Unit
     ) {
-        SplitterScopeImpl(
-            isHorizontal,
-            splitPaneState
-        ).apply {
-            block()
-            this@SplitPaneScopeImpl.splitter = splitter
-        }
+        firstPlaceableMinimalSize = minSize
+        firstPlaceableContent = content
+    }
 
+    override fun second(
+        minSize: Dp,
+        content: @Composable () -> Unit
+    ) {
+        secondPlaceableMinimalSize = minSize
+        secondPlaceableContent = content
+    }
+
+    override fun splitter(block: SplitterScope.() -> Unit) {
+        SplitterScopeImpl(this).block()
     }
 }
 
@@ -154,23 +164,21 @@ internal class SplitPaneScopeImpl(
  * Changes to the provided initial values will **not** result in the state being recreated or
  * changed in any way if it has already been created.
  *
- * @param initial the initial value for [SplitterState.position]
+ * @param initialPositionPercentage the initial value for [SplitPaneState.positionPercentage]
  * @param moveEnabled the initial value for [SplitPaneState.moveEnabled]
- * @param interactionState the initial value for [SplitterState.interactionState]
+ * @param interactionState the initial value for [SplitPaneState.interactionState]
  * */
 @Composable
 fun rememberSplitPaneState(
-    initial: Dp = 0.dp,
+    initialPositionPercentage: Float = 0f,
     moveEnabled: Boolean = true,
-    interactionState: InteractionState = InteractionState()
+    interactionState: InteractionState = remember { InteractionState() }
 ): SplitPaneState {
     return remember {
         SplitPaneState(
-            SplitterState(
-                initialPosition = initial.value,
-                interactionState = interactionState
-            ),
-            enabled = moveEnabled
+            moveEnabled = moveEnabled,
+            initialPositionPercentage = initialPositionPercentage,
+            interactionState = interactionState
         )
     }
 }
