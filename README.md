@@ -36,7 +36,6 @@ at https://android.googlesource.com/platform/frameworks/support.
    * [components](components) - custom components of Compose for Desktop
        * [Video Player](components/VideoPlayer)
        * [Split Pane](components/SplitPane)
-       * [Color Picker](components/ColorPicker)
        
 ## Getting latest version of Compose for Desktop ##
 

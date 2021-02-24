@@ -15,13 +15,22 @@ open class NativeDistributions @Inject constructor(
     var description: String? = null
     var copyright: String? = null
     var vendor: String? = null
-    var version: String? = null
+    @Deprecated(
+        "version is deprecated, use packageVersion instead",
+        replaceWith = ReplaceWith("packageVersion")
+    )
+    var version: String?
+        get() = packageVersion
+        set(value) {
+            packageVersion = value
+        }
+    var packageVersion: String? = null
 
     val outputBaseDir: DirectoryProperty = objects.directoryProperty().apply {
         set(layout.buildDirectory.dir("compose/binaries"))
     }
 
-    var modules = arrayListOf("java.desktop")
+    var modules = arrayListOf("java.desktop", "java.logging")
     fun modules(vararg modules: String) {
         this.modules.addAll(modules.toList())
     }

@@ -6,8 +6,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.ui.examples.jetissues.view.JetIssuesView
 import androidx.ui.examples.jetissues.view.Repository
 import androidx.ui.examples.jetissues.data.IssuesRepositoryImpl
+import androidx.ui.examples.jetissues.data.defaultAuth
 
-val repo = IssuesRepositoryImpl("ktorio", "ktor", System.getenv("GITHUB_TOKEN") ?: "fa7774306d1b9ab4af76652599841ee69a88fb6f")
+val repo = IssuesRepositoryImpl("ktorio", "ktor", System.getenv("GITHUB_TOKEN") ?: defaultAuth)
 
 fun main() = Window(
     title = "JetIssues",
