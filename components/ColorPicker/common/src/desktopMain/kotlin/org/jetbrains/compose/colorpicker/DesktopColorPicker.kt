@@ -101,20 +101,23 @@ internal actual fun ColorCircle(
                 val arcLeftCorner = Offset(center.x - (arcSizePart / 2), center.y - (arcSizePart / 2))
                 val arcSize = Size(arcSizePart - arcLeftCorner.x, arcSizePart - arcLeftCorner.y)
                 onDrawBehind {
-                    StaticConstants.colors.forEach { angleColor ->
-                        drawArc(
-                            brush = Brush.radialGradient(
-                                colors = listOf(Color.Transparent, angleColor.color),
-                                center = Offset(this.size.center.x, this.size.center.y),
-                                radius = arcSize.minDimension / 2,
-                                tileMode = TileMode.Clamp
-                            ),
-                            startAngle = angleColor.angle,
-                            sweepAngle = 1.5f,
-                            useCenter = true,
-                            size = arcSize,
-                            topLeft = arcLeftCorner
-                        )
+                    with(StaticConstants.colors) {
+                        for (index in indices) {
+                            val angleColor = get(index)
+                            drawArc(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(Color.Transparent, angleColor.color),
+                                    center = Offset(this@onDrawBehind.size.center.x, this@onDrawBehind.size.center.y),
+                                    radius = arcSize.minDimension / 2,
+                                    tileMode = TileMode.Clamp
+                                ),
+                                startAngle = angleColor.angle,
+                                sweepAngle = 1.5f,
+                                useCenter = true,
+                                size = arcSize,
+                                topLeft = arcLeftCorner
+                            )
+                        }
                     }
                 }
             }
