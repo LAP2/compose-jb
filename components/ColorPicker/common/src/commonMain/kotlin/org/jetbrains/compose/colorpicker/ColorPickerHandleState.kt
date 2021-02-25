@@ -70,25 +70,6 @@ internal fun ColorCircle() {
 }
 
 @Composable
-internal fun ColorPickerHandle(
-
-) = Box(
-    modifier = Modifier
-        .size(10.dp)
-        .drawWithCache {
-            onDrawBehind {
-                val lineColor = SolidColor(Black)
-                drawCircle(
-                    brush = lineColor,
-                    style = Stroke(width = 2f)
-                )
-            }
-        }
-) {
-
-}
-
-@Composable
 fun ColorPickerWithHandle(
     modifier: Modifier = Modifier,
     colorPickerHandleState: ColorPickerHandleState

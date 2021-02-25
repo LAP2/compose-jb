@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import org.jetbrains.compose.colorpicker.ColorPicker
 
 fun main() = Window(
-    "Color picker demo"
+    "Reproducible arc"
 ) {
     MaterialTheme {
         DesktopTheme {
