@@ -2,8 +2,10 @@ package org.jetbrains.compose.colorpicker
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.Icon
 import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -11,11 +13,21 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.center
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.loadVectorXmlResource
+import androidx.compose.ui.res.vectorXmlResource
 import androidx.compose.ui.unit.dp
+import org.xml.sax.InputSource
 import kotlin.math.floor
 
 internal data class AngleColor(
@@ -91,34 +103,60 @@ private object StaticConstants {
 @Composable
 internal actual fun ColorCircle(
     modifier: Modifier
-) =
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .drawWithCache {
-                val center = size.center
-                val arcSizePart = size.minDimension
-                val arcLeftCorner = Offset(center.x - (arcSizePart / 2), center.y - (arcSizePart / 2))
-                val arcSize = Size(arcSizePart - arcLeftCorner.x, arcSizePart - arcLeftCorner.y)
-                onDrawBehind {
-                    with(StaticConstants.colors) {
-                        for (index in indices) {
-                            val angleColor = get(index)
-                            drawArc(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(Color.Transparent, angleColor.color),
-                                    center = Offset(this@onDrawBehind.size.center.x, this@onDrawBehind.size.center.y),
-                                    radius = arcSize.minDimension / 2,
-                                    tileMode = TileMode.Clamp
-                                ),
-                                startAngle = angleColor.angle,
-                                sweepAngle = 1.5f,
-                                useCenter = true,
-                                size = arcSize,
-                                topLeft = arcLeftCorner
-                            )
-                        }
-                    }
-                }
+) = Box(
+    modifier = modifier.fillMaxSize()
+) {
+    val vi = rememberVectorPainter(
+        ImageVector.Builder(
+            defaultWidth = 50.dp,
+            defaultHeight = 50.dp,
+            viewportWidth = 50f,
+            viewportHeight = 50f,
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Red),
+                strokeLineMiter = 1f,
+                strokeLineWidth = 1f,
+            ) {
+                moveTo(0f,0f)
+                lineTo(50f, 50f)
             }
+        }.build()
     )
+    Icon(
+        vi,
+        "Circle",
+        modifier.matchParentSize(),
+        tint = Color.Unspecified
+    )
+}
+//    Box(
+//        modifier = modifier
+//            .fillMaxSize()
+//            .drawWithCache {
+//                val center = size.center
+//                val arcSizePart = size.minDimension
+//                val arcLeftCorner = Offset(center.x - (arcSizePart / 2), center.y - (arcSizePart / 2))
+//                val arcSize = Size(arcSizePart - arcLeftCorner.x, arcSizePart - arcLeftCorner.y)
+//                onDrawBehind {
+//                    with(StaticConstants.colors) {
+//                        for (index in indices) {
+//                            val angleColor = get(index)
+//                            drawArc(
+//                                brush = Brush.radialGradient(
+//                                    colors = listOf(Color.Transparent, angleColor.color),
+//                                    center = Offset(this@onDrawBehind.size.center.x, this@onDrawBehind.size.center.y),
+//                                    radius = arcSize.minDimension / 2,
+//                                    tileMode = TileMode.Clamp
+//                                ),
+//                                startAngle = angleColor.angle,
+//                                sweepAngle = 1.5f,
+//                                useCenter = true,
+//                                size = arcSize,
+//                                topLeft = arcLeftCorner
+//                            )
+//                        }
+//                    }
+//                }
+//            }
+//    )
