@@ -1,12 +1,24 @@
 package org.jetbrains.compose.colorpicker
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Interaction
+import androidx.compose.foundation.InteractionState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.center
 import androidx.compose.ui.graphics.Brush
@@ -16,11 +28,15 @@ import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.input.pointer.anyChangeConsumed
+import androidx.compose.ui.input.pointer.consumeAllChanges
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import kotlin.math.floor
+import kotlin.math.roundToInt
 
 private data class AngleColor(
     val angle: Float,
@@ -82,7 +98,7 @@ private fun convertHSBToRGB(
 }
 
 private const val angleStep: Float = 1f / 360
-pricate const val DEFAULT_SATURATION = 1f
+private const val DEFAULT_SATURATION = 1f
 private const val DEFAULT_BRIGHTNESS = 1f
 
 private object StaticConstants {
@@ -98,6 +114,7 @@ private fun ColorCircle(
 ) = Box(
     modifier = modifier
         .fillMaxSize()
+        .clip(CircleShape)
         .drawWithCache {
             val center = size.center
             val arcSizePart = size.minDimension
@@ -128,10 +145,13 @@ private fun ColorCircle(
 
 @Composable
 internal fun ColorPickerHandle(
-
+    handleState: ColorPickerHandleState
 ) = Box(
     modifier = Modifier
         .size(10.dp)
+        .clip(GenericShape {size, _ ->
+            addArc(Rect(size.center,6f),0f,360f)
+        })
         .drawWithCache {
             onDrawBehind {
                 val lineColor = SolidColor(Color.Black)
@@ -141,22 +161,79 @@ internal fun ColorPickerHandle(
                 )
             }
         }
+        .pointerInput(handleState) {
+            detectDragGestures { change, dragAmount ->
+                change.consumeAllChanges()
+                handleState.dispatchRawMovement(change.position.x, change.position.y)
+            }
+        }
 ) {
 
 }
 
+@ExperimentalFoundationApi
 @Composable
 actual fun ColorPicker(
-    modifier: Modifier
+    modifier: Modifier,
+    handleState: ColorPickerHandleState
 ) = Layout(
     {
-        ColorCircle()
-        ColorPickerHandle()
+        ColorPickerHandle(handleState)
     },
     modifier
+        .fillMaxSize()
+        .clip(GenericShape { size, layoutDirection ->
+            addArc(
+                Rect(size.center,size.minDimension / 2),
+                0f,
+                360F
+            )
+        })
+        .drawWithCache {
+            val center = size.center
+            val arcSizePart = size.minDimension
+            val arcLeftCorner = Offset(center.x - (arcSizePart / 2), center.y - (arcSizePart / 2))
+            val arcSize = Size(arcSizePart - arcLeftCorner.x, arcSizePart - arcLeftCorner.y)
+            onDrawBehind {
+                with(StaticConstants.colors) {
+                    for (index in indices) {
+                        val angleColor = get(index)
+                        drawArc(
+                            brush = Brush.radialGradient(
+                                colors = listOf(Color.Transparent, angleColor.color),
+                                center = Offset(this@onDrawBehind.size.center.x, this@onDrawBehind.size.center.y),
+                                radius = arcSize.minDimension / 2,
+                                tileMode = TileMode.Clamp
+                            ),
+                            startAngle = angleColor.angle,
+                            sweepAngle = 1.5f,
+                            useCenter = true,
+                            size = arcSize,
+                            topLeft = arcLeftCorner
+                        )
+                    }
+                }
+            }
+        }
+        .pointerInput(handleState) {
+            detectTapGestures {
+                handleState.x = it.x
+                handleState.y = it.y
+                println(it)
+            }
+        }
 ) { measurables: List<Measurable>, constraints: Constraints ->
 
+    val colorPickerHandlePlaceable = measurables[0].measure(constraints.copy(
+        minWidth = 0,
+        maxWidth = 10,
+        minHeight = 0,
+        maxHeight = 10
+    ))
     layout(constraints.maxWidth, constraints.maxHeight) {
-
+        colorPickerHandlePlaceable.place(
+            handleState.x.roundToInt(),
+            handleState.y.roundToInt()
+        )
     }
 }

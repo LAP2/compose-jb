@@ -24,7 +24,7 @@ import kotlin.math.roundToInt
 
 interface MovementDeltaFilter
 
-class ColorPickerHandleState : TwoDirectionsMovable {
+class ColorPickerHandleState: TwoDirectionsMovable {
 
     private val _x = mutableStateOf(0f)
 
@@ -45,11 +45,9 @@ class ColorPickerHandleState : TwoDirectionsMovable {
 
     private val twoDirectionsMovableState = movableState(this::onMove)
 
-    private fun onMove(
-        xDelta: Float,
-        yDelta: Float
-    ) {
-        TODO("Not yet implemented")
+    private fun onMove(xDelta: Float, yDelta: Float) {
+        x+=xDelta
+        y+=yDelta
     }
 
     override suspend fun move(
@@ -62,31 +60,5 @@ class ColorPickerHandleState : TwoDirectionsMovable {
     ) = twoDirectionsMovableState.dispatchRawMovement(xDelta, yDelta)
 
     override val isMoveInProgress: Boolean = twoDirectionsMovableState.isMoveInProgress
-
-}
-@Composable
-internal fun ColorCircle() {
-
-}
-
-@Composable
-fun ColorPickerWithHandle(
-    modifier: Modifier = Modifier,
-    colorPickerHandleState: ColorPickerHandleState
-) = Layout(
-    {
-        ColorCircle()
-        ColorPickerHandle()
-    },
-    modifier
-) { measurables: List<Measurable>, constraints: Constraints ->
-
-    val circlePlaceable = measurables[0].measure(constraints)
-    val handle = measurables[1].measure(constraints)
-
-    layout(constraints.maxWidth, constraints.maxHeight) {
-        circlePlaceable.place(0,0)
-        handle.place(colorPickerHandleState.x.roundToInt(), colorPickerHandleState.y.roundToInt())
-    }
 
 }
