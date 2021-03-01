@@ -1,28 +1,10 @@
 package org.jetbrains.compose.colorpicker
 
 import androidx.compose.foundation.MutatePriority
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Color.Companion.Black
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.DrawStyle
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.Measurable
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.movable.TwoDirectionsMovable
 import org.jetbrains.compose.movable.TwoDirectionsMoveScope
 import org.jetbrains.compose.movable.movableState
-import kotlin.math.roundToInt
-
-interface MovementDeltaFilter
 
 class ColorPickerHandleState: TwoDirectionsMovable {
 
@@ -52,7 +34,8 @@ class ColorPickerHandleState: TwoDirectionsMovable {
 
     override suspend fun move(
         movePriority: MutatePriority,
-        block: suspend TwoDirectionsMoveScope.() -> Unit) = twoDirectionsMovableState.move(movePriority, block)
+        block: suspend TwoDirectionsMoveScope.() -> Unit
+    ) = twoDirectionsMovableState.move(movePriority, block)
 
     override fun dispatchRawMovement(
         xDelta: Float,

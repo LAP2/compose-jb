@@ -4,6 +4,7 @@ import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.MutatorMutex
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.geometry.Offset
 
 interface TwoDirectionsMoveScope {
     fun moveBy(
@@ -21,12 +22,14 @@ interface TwoDirectionsMovable {
 
     fun dispatchRawMovement(
         xDelta: Float,
-        yDelta:Float
+        yDelta: Float
     )
 
     val isMoveInProgress: Boolean
 
 }
+
+fun TwoDirectionsMovable.dispatchRawMovement(offset: Offset) = dispatchRawMovement(offset.x, offset.y)
 
 private typealias TwoDirectionsMoveDeltaConsumer = (xDelta: Float, yDelta: Float) -> Unit
 
