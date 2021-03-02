@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
@@ -34,11 +35,18 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.movable.dispatchRawMovement
+import kotlin.math.acos
+import kotlin.math.cos
 import kotlin.math.floor
+import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 private data class AngleColor(
     val angle: Float,
@@ -190,6 +198,33 @@ internal fun ColorPickerHandle(
             }
         }
 )
+
+private fun Offset.pow(power: Int): Offset = copy(x.pow(power),y.pow(power))
+
+private fun Offset.coerceInCircle(
+    center: Offset,
+    radius: Float
+): Offset {
+    return if (with((this - center).pow(2)){ sqrt(x+y)} > radius) {
+        val t = acos(x)
+        copy(radius * cos(t),radius * sin(t))
+    } else {
+        this
+    }
+}
+
+@Composable
+fun CPTst(
+    modifier: Modifier = Modifier
+) = BoxWithConstraints(
+    modifier
+) {
+    with(LocalDensity.current) {
+        val size = Size(maxWidth.toPx(),maxHeight.toPx())
+        val maxRadius = size.minDimension
+
+    }
+}
 
 @Composable
 actual fun ColorPicker(
