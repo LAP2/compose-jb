@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withRunningRecomposer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
@@ -38,7 +40,12 @@ import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.movable.dispatchRawMovement
+import kotlin.coroutines.coroutineContext
 import kotlin.math.acos
 import kotlin.math.cos
 import kotlin.math.floor
@@ -177,6 +184,7 @@ internal fun ColorPickerHandle(
         )
         .pointerInput(handleState) {
             forEachGesture {
+                val scope = CoroutineScope(coroutineContext)
                 awaitPointerEventScope {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     var drag: PointerInputChange?
@@ -184,14 +192,22 @@ internal fun ColorPickerHandle(
                         drag = awaitTouchSlopOrCancellation(down.id) {change, _ ->
                             change.consumeAllChanges()
                             val currentPos = change.position - down.position
-                            handleState.dispatchRawMovement(currentPos)
+                            scope.launch {
+                                handleState.move {
+                                    moveBy(currentPos.x, currentPos.y)
+                                }
+                            }
                         }
                     } while (drag != null && !drag.anyPositionChangeConsumed())
                     if (drag != null) {
                         drag(drag.id) {
                             it.consumeAllChanges()
                             val currentPos = it.position - down.position
-                            handleState.dispatchRawMovement(currentPos)
+                            scope.launch {
+                                handleState.move {
+                                    moveBy(currentPos.x, currentPos.y)
+                                }
+                            }
                         }
                     }
                 }
@@ -205,9 +221,10 @@ private fun Offset.coerceInCircle(
     center: Offset,
     radius: Float
 ): Offset {
-    return if (with((this - center).pow(2)){ sqrt(x+y)} > radius) {
+    val centerRelativePoint = this - center
+    return if (with((centerRelativePoint).pow(2)){ sqrt(x+y)} > radius) {
         val t = acos(x)
-        copy(radius * cos(t),radius * sin(t))
+        Offset(radius * cos(t),radius * sin(t)) + center
     } else {
         this
     }
@@ -220,8 +237,6 @@ fun CPTst(
     modifier
 ) {
     with(LocalDensity.current) {
-        val size = Size(maxWidth.toPx(),maxHeight.toPx())
-        val maxRadius = size.minDimension
 
     }
 }
