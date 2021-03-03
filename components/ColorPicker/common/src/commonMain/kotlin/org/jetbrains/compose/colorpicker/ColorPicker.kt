@@ -6,5 +6,5 @@ import androidx.compose.ui.Modifier
 @Composable
 expect fun ColorPicker(
     modifier: Modifier,
-    handleState: ColorPickerHandleState
+    state: ColorPickerState
 )
