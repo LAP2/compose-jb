@@ -60,69 +60,17 @@ private data class AngleColor(
     val color: Color
 )
 
-private fun convertHSBToRGB(
-    hue: Float,
-    saturation: Float,
-    brightness: Float
-): Color {
-    var r = 0
-    var g = 0
-    var b = 0
-    if (saturation == 0f) {
-        b = (brightness * 255.0f + 0.5f).toInt()
-        g = b
-        r = g
-    } else {
-        val h = (hue - floor(hue.toDouble()).toFloat()) * 6.0f
-        val f = h - floor(h.toDouble()).toFloat()
-        val p = brightness * (1.0f - saturation)
-        val q = brightness * (1.0f - saturation * f)
-        val t = brightness * (1.0f - saturation * (1.0f - f))
-        when (h.toInt()) {
-            0 -> {
-                r = (brightness * 255.0f + 0.5f).toInt()
-                g = (t * 255.0f + 0.5f).toInt()
-                b = (p * 255.0f + 0.5f).toInt()
-            }
-            1 -> {
-                r = (q * 255.0f + 0.5f).toInt()
-                g = (brightness * 255.0f + 0.5f).toInt()
-                b = (p * 255.0f + 0.5f).toInt()
-            }
-            2 -> {
-                r = (p * 255.0f + 0.5f).toInt()
-                g = (brightness * 255.0f + 0.5f).toInt()
-                b = (t * 255.0f + 0.5f).toInt()
-            }
-            3 -> {
-                r = (p * 255.0f + 0.5f).toInt()
-                g = (q * 255.0f + 0.5f).toInt()
-                b = (brightness * 255.0f + 0.5f).toInt()
-            }
-            4 -> {
-                r = (t * 255.0f + 0.5f).toInt()
-                g = (p * 255.0f + 0.5f).toInt()
-                b = (brightness * 255.0f + 0.5f).toInt()
-            }
-            5 -> {
-                r = (brightness * 255.0f + 0.5f).toInt()
-                g = (p * 255.0f + 0.5f).toInt()
-                b = (q * 255.0f + 0.5f).toInt()
-            }
-        }
-    }
-    return Color(r, g, b)
-}
-
 private const val angleStep: Float = 1f / 360
 private const val DEFAULT_SATURATION = 1f
 private const val DEFAULT_BRIGHTNESS = 1f
 
 private object StaticConstants {
     @JvmStatic
-    val colors = generateSequence(0f) { it + angleStep }.take(360).mapIndexed { angle, hue ->
-        AngleColor(angle.toFloat(), convertHSBToRGB(hue, DEFAULT_SATURATION, DEFAULT_BRIGHTNESS))
-    }.toList()
+    val colors = generateSequence(0f) { it + angleStep }
+        .take(360)
+        .mapIndexed { angle, hue ->
+            AngleColor(angle.toFloat(), convertHSBToRGB(hue, DEFAULT_SATURATION, DEFAULT_BRIGHTNESS))
+        }.toList()
 }
 
 private fun Modifier.drawColorCircle(): Modifier {
@@ -215,20 +163,13 @@ internal fun ColorPickerHandle(
         }
 )
 
-private fun Offset.pow(power: Int): Offset = copy(x.pow(power),y.pow(power))
-
-private fun Offset.coerceInCircle(
-    center: Offset,
-    radius: Float
-): Offset {
-    val centerRelativePoint = this - center
-    return if (with((centerRelativePoint).pow(2)){ sqrt(x+y)} > radius) {
-        val t = acos(x)
-        Offset(radius * cos(t),radius * sin(t)) + center
-    } else {
-        this
-    }
-}
+@Composable
+private fun ColorCircle(
+    modifier: Modifier = Modifier
+) = Box(
+    modifier
+        .drawColorCircle()
+)
 
 @Composable
 fun CPTst(
@@ -236,9 +177,7 @@ fun CPTst(
 ) = BoxWithConstraints(
     modifier
 ) {
-    with(LocalDensity.current) {
 
-    }
 }
 
 @Composable
@@ -254,8 +193,7 @@ actual fun ColorPicker(
         .drawColorCircle()
         .pointerInput(handleState) {
             detectTapGestures {
-                handleState.x = it.x
-                handleState.y = it.y
+                handleState.offset = it
             }
         }
 ) { measurables: List<Measurable>, constraints: Constraints ->
@@ -272,8 +210,8 @@ actual fun ColorPicker(
 
     layout(constraints.maxWidth, constraints.maxHeight) {
         colorPickerHandlePlaceable.place(
-            handleState.x.roundToInt() - xCenterDelta,
-            handleState.y.roundToInt() - yCenterDelta
+            handleState.offset.x.roundToInt() - xCenterDelta,
+            handleState.offset.y.roundToInt() - yCenterDelta
         )
     }
 }

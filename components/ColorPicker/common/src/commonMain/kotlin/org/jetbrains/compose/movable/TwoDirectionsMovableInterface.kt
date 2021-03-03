@@ -30,6 +30,7 @@ interface TwoDirectionsMovable {
 }
 
 fun TwoDirectionsMovable.dispatchRawMovement(offset: Offset) = dispatchRawMovement(offset.x, offset.y)
+fun TwoDirectionsMoveScope.moveBy(offset: Offset) = moveBy(offset.x,offset.y)
 
 private typealias TwoDirectionsMoveDeltaConsumer = (xDelta: Float, yDelta: Float) -> Unit
 
