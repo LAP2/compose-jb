@@ -21,20 +21,15 @@ internal interface HandlePosition {
     var offset: Offset
 }
 
-internal class ColorPickerHandleState(
-    private val setColor: (Color) -> Unit,
-    private val setHandlePosition: (Offset)-> Unit,
+internal interface MovableHandlerState : HandlePosition, TwoDirectionsMovable
+
+internal class ColorToOffsetBiDirectionalConverter(
     private val colorCircleRadius: Float,
     private val colorCircleCenter: Offset,
-    var brightness: Float
-) : HandlePosition, TwoDirectionsMovable {
-
-    override var offset: Offset by mutableStateOf(Offset.Unspecified)
-
-    private val twoDirectionsMovableState = movableState(this::onMove)
-
+    private val brightness: Float
+) {
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun Offset.calculateColor(): Color {
+    inline fun Offset.toColor(): Color {
         return Color(
             HSBtoRGB(
                 Math.toDegrees(acos(x).toDouble()).toFloat(),
@@ -45,7 +40,7 @@ internal class ColorPickerHandleState(
     }
 
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun Color.calculateOffset(): Offset {
+    inline fun Color.toOffset(): Offset {
         val hsb = RGBtoHSB(
             red.roundToInt(),
             green.roundToInt(),
@@ -58,22 +53,16 @@ internal class ColorPickerHandleState(
             (radius * sin(Math.toRadians(angle.toDouble()))).toFloat()
         ) + colorCircleCenter
     }
+}
 
-    fun toColor(
-        handlePosition: Offset,
-    ) {
-        setColor(handlePosition.calculateColor())
-    }
+internal class ColorPickerHandleState : MovableHandlerState {
 
-    fun toHandlePosition(
-        color: Color,
-    ) {
-        setHandlePosition(color.calculateOffset())
-    }
+    override var offset: Offset by mutableStateOf(Offset.Unspecified)
+
+    private val twoDirectionsMovableState = movableState(this::onMove)
 
     private fun onMove(xDelta: Float, yDelta: Float) {
         offset += Offset(xDelta, yDelta)
-        toColor(offset)
     }
 
     override suspend fun move(

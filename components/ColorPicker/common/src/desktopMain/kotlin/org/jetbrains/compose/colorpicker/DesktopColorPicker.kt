@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,9 +32,11 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.movable.TwoDirectionsMovable
+import org.jetbrains.compose.movable.dispatchRawMovement
 import java.awt.Color.HSBtoRGB
 import kotlin.coroutines.coroutineContext
 import kotlin.math.acos
@@ -170,24 +173,35 @@ actual fun ColorCircle(
 ) = BoxWithConstraints(
     modifier
 ) {
-    val coerceInCircle = remember(constraints) {
-        with(Size(maxWidth.value, maxHeight.value)) {
+
+    val coerceInCircle = remember(maxWidth, maxHeight) {
             CoerceInCircle(
-                center,
-                minDimension
+                Offset(
+                    maxWidth.value / 2,
+                    maxHeight.value / 2
+                ),
+                min(maxWidth,maxHeight).value
             )
-        }
     }
 
-    val handleState = remember(coerceInCircle, colorPickerState) {
+    val converter = remember(coerceInCircle, colorPickerState.brightness) {
+        ColorToOffsetBiDirectionalConverter(
+            coerceInCircle.circleRadius,
+            coerceInCircle.circleCenter,
+            colorPickerState.brightness
+        )
+    }
+
+    val handleState = remember(colorPickerState) {
         ColorPickerHandleState()
     }
 
-    val handleToColorConverter = remember(colorPickerState, handleState, coerceInCircle) {
-        HandleStateToColorBiDirectionalConverter(
-            {colorPickerState.color = it},
-            {handleState.offset = it}
-        )
+    LaunchedEffect(colorPickerState.color) {
+        with(handleState) {
+            with(converter) {
+                dispatchRawMovement(colorPickerState.color.toOffset()) // TODO add smooth movement
+            }
+        }
     }
 
     ColorCircleWithHandle(
@@ -217,7 +231,7 @@ private data class CoerceInCircle(
 @Composable
 private fun ColorCircleWithHandle(
     modifier: Modifier,
-    handleState: ColorPickerHandleState,
+    handleState: MovableHandlerState,
     coerceInCircle: OffsetCoerceIn
 ) = Layout(
     {
