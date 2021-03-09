@@ -18,7 +18,7 @@ import kotlin.math.sqrt
 import kotlin.math.roundToInt
 
 internal interface HandlePosition {
-    var offset: Offset
+    val offset: Offset
 }
 
 internal interface MovableHandlerState : HandlePosition, TwoDirectionsMovable
@@ -57,12 +57,13 @@ internal class ColorToOffsetBiDirectionalConverter(
 
 internal class ColorPickerHandleState : MovableHandlerState {
 
-    override var offset: Offset by mutableStateOf(Offset.Unspecified)
+    override var offset: Offset by mutableStateOf(Offset.Zero)
 
     private val twoDirectionsMovableState = movableState(this::onMove)
 
-    private fun onMove(xDelta: Float, yDelta: Float) {
+    private fun onMove(xDelta: Float, yDelta: Float): Offset {
         offset += Offset(xDelta, yDelta)
+        return offset
     }
 
     override suspend fun move(

@@ -9,16 +9,10 @@ expect fun ColorCircle(
     colorPickerState: ColorPickerState
 )
 
-//@Composable
-//expect fun BrightnessSlider(
-//    modifier: Modifier,
-//    colorPickerState: ColorPickerBrightnessState
-//)
-
 @Composable
 fun ColorPicker(
     modifier: Modifier = Modifier,
     colorPickerState: ColorPickerState
 ) {
-
+    ColorCircle(modifier,colorPickerState)
 }

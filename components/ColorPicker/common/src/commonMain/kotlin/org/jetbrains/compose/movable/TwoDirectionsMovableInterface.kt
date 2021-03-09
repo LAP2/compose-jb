@@ -10,7 +10,7 @@ interface TwoDirectionsMoveScope {
     fun moveBy(
         xPixels: Float,
         yPixels: Float
-    )
+    ) : Offset
 }
 
 interface TwoDirectionsMovable {
@@ -23,7 +23,7 @@ interface TwoDirectionsMovable {
     fun dispatchRawMovement(
         xDelta: Float,
         yDelta: Float
-    )
+    ): Offset
 
     val isMoveInProgress: Boolean
 
@@ -33,7 +33,7 @@ fun TwoDirectionsMovable.dispatchRawMovement(offset: Offset) = dispatchRawMoveme
 
 fun TwoDirectionsMoveScope.moveBy(offset: Offset) = moveBy(offset.x,offset.y)
 
-private typealias TwoDirectionsMoveDeltaConsumer = (xDelta: Float, yDelta: Float) -> Unit
+private typealias TwoDirectionsMoveDeltaConsumer = (xDelta: Float, yDelta: Float) -> Offset
 
 fun movableState(
     consumeMoveDelta: TwoDirectionsMoveDeltaConsumer
@@ -58,8 +58,8 @@ private class DefaultTwoDirectionsMovableState(
     val onMoveDelta: TwoDirectionsMoveDeltaConsumer
 ) : TwoDirectionsMovable {
 
-    private val twoDirectionsMoveScope = object : TwoDirectionsMoveScope {
-        override fun moveBy(xPixels: Float, yPixels: Float) = onMoveDelta(xPixels, yPixels)
+    private val twoDirectionsMoveScope: TwoDirectionsMoveScope = object : TwoDirectionsMoveScope {
+        override fun moveBy(xPixels: Float, yPixels: Float): Offset = onMoveDelta(xPixels, yPixels)
     }
 
     private val moveMutex = MutatorMutex()
@@ -77,7 +77,7 @@ private class DefaultTwoDirectionsMovableState(
         }
     }
 
-    override fun dispatchRawMovement(xDelta: Float, yDelta: Float) = onMoveDelta(xDelta, yDelta)
+    override fun dispatchRawMovement(xDelta: Float, yDelta: Float): Offset = onMoveDelta(xDelta, yDelta)
 
     override val isMoveInProgress: Boolean
         get() = isMovingState.value

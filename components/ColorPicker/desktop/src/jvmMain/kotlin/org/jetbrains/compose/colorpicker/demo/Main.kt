@@ -5,7 +5,8 @@ import androidx.compose.desktop.Window
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.ui.Modifier
-import org.jetbrains.compose.colorpicker.ColorCircle
+import org.jetbrains.compose.colorpicker.ColorPicker
+import org.jetbrains.compose.colorpicker.ColorPickerState
 import org.jetbrains.compose.colorpicker.rememberColorPickerState
 
 fun main() = Window(
@@ -13,8 +14,8 @@ fun main() = Window(
 ) {
     MaterialTheme {
         DesktopTheme {
-            val state = rememberColorPickerState()
-            ColorCircle(
+            val state: ColorPickerState = rememberColorPickerState()
+            ColorPicker(
                 Modifier.fillMaxSize(),
                 state
             )
