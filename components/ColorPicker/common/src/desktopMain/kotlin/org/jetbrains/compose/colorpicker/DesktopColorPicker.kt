@@ -2,6 +2,7 @@ package org.jetbrains.compose.colorpicker
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
@@ -44,12 +45,11 @@ import androidx.compose.ui.unit.min
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.movable.TwoDirectionsMovable
-import org.jetbrains.compose.movable.dispatchRawMovement
-import org.jetbrains.compose.movable.smoothMoveTo
 import java.awt.Color.HSBtoRGB
 import kotlin.coroutines.coroutineContext
 import kotlin.math.acos
+import kotlin.math.asin
+import kotlin.math.atan
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -112,35 +112,35 @@ private fun Modifier.drawColorCircle(): Modifier {
 internal typealias OffsetCoerceIn = (Offset) -> Offset
 
 internal fun Modifier.twoDirectionsDragProcess(
-    movable: TwoDirectionsMovable,
+    movable: ColorPickerHandleState,
     coerceInMovementBorder: OffsetCoerceIn = { it }
 ): Modifier {
     return this
         .pointerInput(movable) {
-            detectDragGestures { change, dragAmount ->  }
-            forEachGesture {
-                val scope = CoroutineScope(coroutineContext)
-                awaitPointerEventScope {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    var drag: PointerInputChange?
-                    do {
-                        drag = awaitTouchSlopOrCancellation(down.id) { change, _ ->
-                            change.consumeAllChanges()
-                            val currentPos = coerceInMovementBorder(change.position - down.position)
-                            scope.launch {
-                                movable.move {
-                                    moveBy(currentPos.x, currentPos.y)
+            coroutineScope {
+                forEachGesture {
+                    awaitPointerEventScope {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var drag: PointerInputChange?
+                        do {
+                            drag = awaitTouchSlopOrCancellation(down.id) { change, _ ->
+                                change.consumeAllChanges()
+                                val currentPos = coerceInMovementBorder(
+                                    (change.position - down.position) + movable.offset
+                                )
+                                launch {
+                                    movable.animatableOffset.snapTo(currentPos)
                                 }
                             }
-                        }
-                    } while (drag != null && !drag.anyPositionChangeConsumed())
-                    if (drag != null) {
-                        drag(drag.id) {
-                            it.consumeAllChanges()
-                            val currentPos = coerceInMovementBorder(it.position - down.position)
-                            scope.launch {
-                                movable.move {
-                                    moveBy(currentPos.x, currentPos.y)
+                        } while (drag != null && !drag.anyPositionChangeConsumed())
+                        if (drag != null) {
+                            drag(drag.id) {
+                                it.consumeAllChanges()
+                                val currentPos = coerceInMovementBorder(
+                                    (it.position - down.position) + movable.offset
+                                )
+                                launch {
+                                    movable.animatableOffset.snapTo(currentPos)
                                 }
                             }
                         }
@@ -152,7 +152,7 @@ internal fun Modifier.twoDirectionsDragProcess(
 
 @Composable
 internal fun ColorPickerHandle(
-    handleState: TwoDirectionsMovable,
+    handleState: ColorPickerHandleState,
     handleMovementBorder: OffsetCoerceIn
 ) = Box(
     modifier = Modifier
@@ -191,9 +191,8 @@ actual fun ColorCircle(
                     maxWidth.value / 2,
                     maxHeight.value / 2
                 ),
-                min(maxWidth,maxHeight).value
+                min(maxWidth,maxHeight).value / 2
             )
-        println("Center and r: $cic")
         cic
     }
 
@@ -212,19 +211,20 @@ actual fun ColorCircle(
     var cachedColor by remember { mutableStateOf(colorPickerState.color) }
 
     LaunchedEffect(colorPickerState) {
-        handleState.dispatchRawMovement(with(converter) { colorPickerState.color.toOffset() - handleState.offset })
+        handleState.animatableOffset.snapTo(with(converter) {colorPickerState.color.toOffset()})
     }
 
     LaunchedEffect(colorPickerState.color) {
-        println("Color effect")
         if (cachedColor != colorPickerState.color) {
             cachedColor = colorPickerState.color
-            handleState.smoothMoveTo(handleState.offset, with(converter) { colorPickerState.color.toOffset() })
+            handleState.animatableOffset.animateTo(
+                targetValue = with(converter) { colorPickerState.color.toOffset() },
+                animationSpec = tween()
+            )
         }
     }
 
     LaunchedEffect(handleState.offset) {
-        println("Offset effect")
         val newColor = with(converter) { handleState.offset.toColor() }
         cachedColor = newColor
         colorPickerState.color = newColor
@@ -244,9 +244,11 @@ private data class CoerceInCircle(
 
     override fun invoke(incomeOffset: Offset): Offset {
         val centerRelativePoint = incomeOffset - circleCenter
-        return if (with((centerRelativePoint).pow(2)){ sqrt(x + y) } > circleRadius) {
-            val t = acos(incomeOffset.x)
-            Offset(circleRadius * cos(t), circleRadius * sin(t)) + circleCenter
+        val currentRadius = with((centerRelativePoint).pow(2)) {sqrt(x + y)}
+        return if (currentRadius > circleRadius) {
+            val xt = acos(centerRelativePoint.x / currentRadius)
+            val yt = asin(centerRelativePoint.y / currentRadius)
+            Offset(circleRadius * cos(xt), circleRadius * sin(yt)) + circleCenter
         } else {
             incomeOffset
         }
@@ -257,7 +259,7 @@ private data class CoerceInCircle(
 @Composable
 private fun ColorCircleWithHandle(
     modifier: Modifier,
-    handleState: MovableHandlerState,
+    handleState: ColorPickerHandleState,
     coerceInCircle: OffsetCoerceIn
 ) {
     Layout(
@@ -270,8 +272,9 @@ private fun ColorCircleWithHandle(
             .pointerInput(handleState) {
                 coroutineScope {
                     detectTapGestures {
-                        println("taped on $it")
-                        launch { handleState.smoothMoveTo(handleState.offset,it) }
+                        launch {
+                            handleState.animatableOffset.animateTo(it)
+                        }
                     }
                 }
             }

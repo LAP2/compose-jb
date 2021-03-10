@@ -1,5 +1,7 @@
 package org.jetbrains.compose.colorpicker
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.foundation.MutatePriority
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -55,27 +57,30 @@ internal class ColorToOffsetBiDirectionalConverter(
     }
 }
 
-internal class ColorPickerHandleState : MovableHandlerState {
+internal class ColorPickerHandleState : HandlePosition {
 
-    override var offset: Offset by mutableStateOf(Offset.Zero)
+    val animatableOffset = Animatable(Offset.Zero, Offset.VectorConverter)
 
-    private val twoDirectionsMovableState = movableState(this::onMove)
+    override val offset: Offset
+        get() = animatableOffset.value
 
-    private fun onMove(xDelta: Float, yDelta: Float): Offset {
-        offset += Offset(xDelta, yDelta)
-        return offset
-    }
+    //    private val twoDirectionsMovableState = movableState(this::onMove)
 
-    override suspend fun move(
-        movePriority: MutatePriority,
-        block: suspend TwoDirectionsMoveScope.() -> Unit
-    ) = twoDirectionsMovableState.move(movePriority, block)
+//    private fun onMove(xDelta: Float, yDelta: Float): Offset {
+//        offset += Offset(xDelta, yDelta)
+//        return offset
+//    }
 
-    override fun dispatchRawMovement(
-        xDelta: Float,
-        yDelta: Float
-    ) = twoDirectionsMovableState.dispatchRawMovement(xDelta, yDelta)
-
-    override val isMoveInProgress: Boolean = twoDirectionsMovableState.isMoveInProgress
+//    override suspend fun move(
+//        movePriority: MutatePriority,
+//        block: suspend TwoDirectionsMoveScope.() -> Unit
+//    ) = twoDirectionsMovableState.move(movePriority, block)
+//
+//    override fun dispatchRawMovement(
+//        xDelta: Float,
+//        yDelta: Float
+//    ) = twoDirectionsMovableState.dispatchRawMovement(xDelta, yDelta)
+//
+//    override val isMoveInProgress: Boolean = twoDirectionsMovableState.isMoveInProgress
 
 }
