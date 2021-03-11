@@ -1,12 +1,9 @@
 package org.jetbrains.compose.colorpicker
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.forEachGesture
@@ -19,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -42,14 +38,12 @@ import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.awt.Color.HSBtoRGB
-import kotlin.coroutines.coroutineContext
 import kotlin.math.acos
 import kotlin.math.asin
-import kotlin.math.atan
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -112,11 +106,11 @@ private fun Modifier.drawColorCircle(): Modifier {
 internal typealias OffsetCoerceIn = (Offset) -> Offset
 
 internal fun Modifier.twoDirectionsDragProcess(
-    movable: ColorPickerHandleState,
+    handePosition: HandlePosition,
     coerceInMovementBorder: OffsetCoerceIn = { it }
 ): Modifier {
     return this
-        .pointerInput(movable) {
+        .pointerInput(handePosition) {
             coroutineScope {
                 forEachGesture {
                     awaitPointerEventScope {
@@ -126,10 +120,10 @@ internal fun Modifier.twoDirectionsDragProcess(
                             drag = awaitTouchSlopOrCancellation(down.id) { change, _ ->
                                 change.consumeAllChanges()
                                 val currentPos = coerceInMovementBorder(
-                                    (change.position - down.position) + movable.offset
+                                    (change.position - down.position) + handePosition.offset
                                 )
                                 launch {
-                                    movable.animatableOffset.snapTo(currentPos)
+                                    handePosition.setOffset(currentPos)
                                 }
                             }
                         } while (drag != null && !drag.anyPositionChangeConsumed())
@@ -137,10 +131,10 @@ internal fun Modifier.twoDirectionsDragProcess(
                             drag(drag.id) {
                                 it.consumeAllChanges()
                                 val currentPos = coerceInMovementBorder(
-                                    (it.position - down.position) + movable.offset
+                                    (it.position - down.position) + handePosition.offset
                                 )
                                 launch {
-                                    movable.animatableOffset.snapTo(currentPos)
+                                    handePosition.setOffset(currentPos)
                                 }
                             }
                         }
@@ -152,7 +146,7 @@ internal fun Modifier.twoDirectionsDragProcess(
 
 @Composable
 internal fun ColorPickerHandle(
-    handleState: ColorPickerHandleState,
+    handlePosition: HandlePosition,
     handleMovementBorder: OffsetCoerceIn
 ) = Box(
     modifier = Modifier
@@ -172,10 +166,26 @@ internal fun ColorPickerHandle(
             }
         )
         .twoDirectionsDragProcess(
-            handleState,
+            handlePosition,
             handleMovementBorder
         )
 )
+
+private fun Modifier.handleTapGestures(
+    handlePosition: HandlePosition,
+    coerceInCircle: OffsetCoerceIn
+): Modifier {
+    return this
+        .pointerInput(handlePosition) {
+            coroutineScope {
+                detectTapGestures {
+                    launch {
+                        handlePosition.moveTo(coerceInCircle(it))
+                    }
+                }
+            }
+        }
+}
 
 @Composable
 actual fun ColorCircle(
@@ -196,6 +206,8 @@ actual fun ColorCircle(
         cic
     }
 
+    println(colorPickerState.color)
+
     val converter = remember(coerceInCircle, colorPickerState.brightness) {
         ColorToOffsetBiDirectionalConverter(
             coerceInCircle.circleRadius,
@@ -204,30 +216,25 @@ actual fun ColorCircle(
         )
     }
 
-    val handleState = remember(colorPickerState) {
-        ColorPickerHandleState()
+    val handleState = remember(colorPickerState,converter) {
+        ColorPickerHandleState(
+            converter,
+            colorPickerState
+        )
     }
 
-    var cachedColor by remember { mutableStateOf(colorPickerState.color) }
+    val scope = rememberCoroutineScope()
+    var colorChangeJob by remember { mutableStateOf<Job?>(null)}
 
     LaunchedEffect(colorPickerState) {
-        handleState.animatableOffset.snapTo(with(converter) {colorPickerState.color.toOffset()})
+        handleState.setOffset(with(converter) {colorPickerState.color.toOffset()})
     }
 
-    LaunchedEffect(colorPickerState.color) {
-        if (cachedColor != colorPickerState.color) {
-            cachedColor = colorPickerState.color
-            handleState.animatableOffset.animateTo(
-                targetValue = with(converter) { colorPickerState.color.toOffset() },
-                animationSpec = tween()
-            )
+    if (handleState.producedColor != colorPickerState.color) {
+        colorChangeJob?.cancel()
+        colorChangeJob = scope.launch {
+            handleState.moveToColor(colorPickerState.color)
         }
-    }
-
-    LaunchedEffect(handleState.offset) {
-        val newColor = with(converter) { handleState.offset.toColor() }
-        cachedColor = newColor
-        colorPickerState.color = newColor
     }
 
     ColorCircleWithHandle(
@@ -259,25 +266,17 @@ private data class CoerceInCircle(
 @Composable
 private fun ColorCircleWithHandle(
     modifier: Modifier,
-    handleState: ColorPickerHandleState,
+    handlePosition: HandlePosition,
     coerceInCircle: OffsetCoerceIn
 ) {
     Layout(
         {
-            ColorPickerHandle(handleState,coerceInCircle)
+            ColorPickerHandle(handlePosition,coerceInCircle)
         },
         modifier
             .fillMaxSize()
             .drawColorCircle()
-            .pointerInput(handleState) {
-                coroutineScope {
-                    detectTapGestures {
-                        launch {
-                            handleState.animatableOffset.animateTo(it)
-                        }
-                    }
-                }
-            }
+            .handleTapGestures(handlePosition,coerceInCircle)
     ) { measurables: List<Measurable>, constraints: Constraints ->
 
         val colorPickerHandlePlaceable = measurables[0].measure(
@@ -292,8 +291,8 @@ private fun ColorCircleWithHandle(
 
         layout(constraints.maxWidth, constraints.maxHeight) {
             colorPickerHandlePlaceable.place(
-                handleState.offset.x.roundToInt() - xCenterDelta,
-                handleState.offset.y.roundToInt() - yCenterDelta
+                handlePosition.offset.x.roundToInt() - xCenterDelta,
+                handlePosition.offset.y.roundToInt() - yCenterDelta
             )
         }
     }

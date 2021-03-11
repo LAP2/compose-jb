@@ -1,7 +1,10 @@
 package org.jetbrains.compose.colorpicker
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.AnimationVector2D
 import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.MutatePriority
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -21,9 +24,10 @@ import kotlin.math.roundToInt
 
 internal interface HandlePosition {
     val offset: Offset
+    suspend fun moveBy(delta: Offset)
+    suspend fun moveTo(target: Offset)
+    suspend fun setOffset(newOffset: Offset)
 }
-
-internal interface MovableHandlerState : HandlePosition, TwoDirectionsMovable
 
 internal class ColorToOffsetBiDirectionalConverter(
     private val colorCircleRadius: Float,
@@ -57,30 +61,44 @@ internal class ColorToOffsetBiDirectionalConverter(
     }
 }
 
-internal class ColorPickerHandleState : HandlePosition {
+internal class ColorPickerHandleState(
+    private val converter: ColorToOffsetBiDirectionalConverter,
+    private val colorCircleState: ColorCircleState,
+    private val animationSpec: AnimationSpec<Offset> = tween()
+) : HandlePosition {
 
-    val animatableOffset = Animatable(Offset.Zero, Offset.VectorConverter)
+    private val animatableOffset = Animatable(Offset.Zero, Offset.VectorConverter)
 
     override val offset: Offset
         get() = animatableOffset.value
 
-    //    private val twoDirectionsMovableState = movableState(this::onMove)
+    override suspend fun setOffset(newOffset: Offset) {
+        animatableOffset.snapTo(newOffset)
+        producedColor = toColor()
+        colorCircleState.color = producedColor
+    }
 
-//    private fun onMove(xDelta: Float, yDelta: Float): Offset {
-//        offset += Offset(xDelta, yDelta)
-//        return offset
-//    }
+    override suspend fun moveBy(delta: Offset) {
+        moveTo(offset + delta)
+    }
 
-//    override suspend fun move(
-//        movePriority: MutatePriority,
-//        block: suspend TwoDirectionsMoveScope.() -> Unit
-//    ) = twoDirectionsMovableState.move(movePriority, block)
-//
-//    override fun dispatchRawMovement(
-//        xDelta: Float,
-//        yDelta: Float
-//    ) = twoDirectionsMovableState.dispatchRawMovement(xDelta, yDelta)
-//
-//    override val isMoveInProgress: Boolean = twoDirectionsMovableState.isMoveInProgress
+    override suspend fun moveTo(target: Offset) {
+        animatableOffset.animateTo(
+            target,
+            animationSpec = animationSpec
+        )
+        producedColor = toColor()
+        colorCircleState.color = producedColor
+    }
+
+    suspend fun moveToColor(target: Color) {
+        moveTo(with(converter){target.toOffset()})
+    }
+
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun toColor(): Color = with(converter){offset.toColor()}
+
+    var producedColor: Color = toColor()
+        private set
 
 }
