@@ -52,8 +52,8 @@ internal class ColorToOffsetBiDirectionalConverter(
             green.roundToInt(),
             blue.roundToInt(),null
         )
-        val angle = hsb[0]
-        val radius = hsb[1]
+        val angle = hsb[0] * 360
+        val radius = hsb[1] * colorCircleRadius
         return Offset(
             (radius * cos(Math.toRadians(angle.toDouble()))).toFloat(),
             (radius * sin(Math.toRadians(angle.toDouble()))).toFloat()
@@ -67,14 +67,14 @@ internal class ColorPickerHandleState(
     private val animationSpec: AnimationSpec<Offset> = tween()
 ) : HandlePosition {
 
-    private val animatableOffset = Animatable(Offset.Zero, Offset.VectorConverter)
+    private val animatableOffset = Animatable(colorCircleState.color.toOffset(), Offset.VectorConverter)
 
     override val offset: Offset
         get() = animatableOffset.value
 
     override suspend fun setOffset(newOffset: Offset) {
         animatableOffset.snapTo(newOffset)
-        producedColor = toColor()
+        producedColor = offset.toColor()
         colorCircleState.color = producedColor
     }
 
@@ -86,19 +86,23 @@ internal class ColorPickerHandleState(
         animatableOffset.animateTo(
             target,
             animationSpec = animationSpec
-        )
-        producedColor = toColor()
-        colorCircleState.color = producedColor
+        ) {
+            producedColor = this.value.toColor()
+            colorCircleState.color = producedColor
+        }
     }
 
     suspend fun moveToColor(target: Color) {
-        moveTo(with(converter){target.toOffset()})
+        moveTo(target.toOffset())
     }
 
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun toColor(): Color = with(converter){offset.toColor()}
+    private inline fun Color.toOffset(): Offset = with(converter){this@toOffset.toOffset()}
 
-    var producedColor: Color = toColor()
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun Offset.toColor(): Color = with(converter){this@toColor.toColor()}
+
+    var producedColor: Color = colorCircleState.color
         private set
 
 }

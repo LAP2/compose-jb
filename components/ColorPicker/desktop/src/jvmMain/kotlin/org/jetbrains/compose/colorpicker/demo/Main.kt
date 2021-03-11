@@ -115,13 +115,9 @@ fun main() = Window(
                     mutableStateOf(-1),
                     mutableListOf(Red, Green, Blue)
                 ) {
-                    println("Color selected")
-//                    state.color = it
+                    state.color = it
                 }
             }
-//            if (colorListState.selectedColor.value >= 0 && state.color != colorListState.colors[colorListState.selectedColor.value]) {
-//                colorListState.colors[colorListState.selectedColor.value] = state.color
-//            }
             Column {
                 ColorsList(colorListState)
                 GradientLine(colorListState.colors)

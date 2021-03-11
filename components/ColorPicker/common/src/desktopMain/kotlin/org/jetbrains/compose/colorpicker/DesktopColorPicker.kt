@@ -1,6 +1,5 @@
 package org.jetbrains.compose.colorpicker
 
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
@@ -13,10 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -206,8 +201,6 @@ actual fun ColorCircle(
         cic
     }
 
-    println(colorPickerState.color)
-
     val converter = remember(coerceInCircle, colorPickerState.brightness) {
         ColorToOffsetBiDirectionalConverter(
             coerceInCircle.circleRadius,
@@ -224,18 +217,13 @@ actual fun ColorCircle(
     }
 
     val scope = rememberCoroutineScope()
-    var colorChangeJob by remember { mutableStateOf<Job?>(null)}
-
-    LaunchedEffect(colorPickerState) {
-        handleState.setOffset(with(converter) {colorPickerState.color.toOffset()})
-    }
 
     if (handleState.producedColor != colorPickerState.color) {
-        colorChangeJob?.cancel()
-        colorChangeJob = scope.launch {
+        scope.launch {
             handleState.moveToColor(colorPickerState.color)
         }
     }
+
 
     ColorCircleWithHandle(
         modifier,
