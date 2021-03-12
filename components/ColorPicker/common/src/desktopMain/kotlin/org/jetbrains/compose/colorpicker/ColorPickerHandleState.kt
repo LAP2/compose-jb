@@ -2,18 +2,10 @@ package org.jetbrains.compose.colorpicker
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.AnimationVector2D
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.MutatePriority
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import org.jetbrains.compose.movable.TwoDirectionsMovable
-import org.jetbrains.compose.movable.TwoDirectionsMoveScope
-import org.jetbrains.compose.movable.movableState
 import java.awt.Color.HSBtoRGB
 import java.awt.Color.RGBtoHSB
 import kotlin.math.acos
@@ -24,9 +16,9 @@ import kotlin.math.roundToInt
 
 internal interface HandlePosition {
     val offset: Offset
-    suspend fun moveBy(delta: Offset)
+    suspend fun smoothMoveBy(delta: Offset)
+    suspend fun smoothMoveTo(target: Offset)
     suspend fun moveTo(target: Offset)
-    suspend fun setOffset(newOffset: Offset)
 }
 
 internal class ColorToOffsetBiDirectionalConverter(
@@ -72,17 +64,17 @@ internal class ColorPickerHandleState(
     override val offset: Offset
         get() = animatableOffset.value
 
-    override suspend fun setOffset(newOffset: Offset) {
-        animatableOffset.snapTo(newOffset)
+    override suspend fun moveTo(target: Offset) {
+        animatableOffset.snapTo(target)
         producedColor = offset.toColor()
         colorCircleState.color = producedColor
     }
 
-    override suspend fun moveBy(delta: Offset) {
-        moveTo(offset + delta)
+    override suspend fun smoothMoveBy(delta: Offset) {
+        smoothMoveTo(offset + delta)
     }
 
-    override suspend fun moveTo(target: Offset) {
+    override suspend fun smoothMoveTo(target: Offset) {
         animatableOffset.animateTo(
             target,
             animationSpec = animationSpec
@@ -93,7 +85,11 @@ internal class ColorPickerHandleState(
     }
 
     suspend fun moveToColor(target: Color) {
-        moveTo(target.toOffset())
+        animatableOffset.animateTo(
+            target.toOffset(),
+            animationSpec = animationSpec
+        )
+        producedColor = target
     }
 
     @Suppress("NOTHING_TO_INLINE")
