@@ -33,7 +33,6 @@ import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.awt.Color.HSBtoRGB
@@ -118,7 +117,7 @@ internal fun Modifier.twoDirectionsDragProcess(
                                     (change.position - down.position) + handePosition.offset
                                 )
                                 launch {
-                                    handePosition.setOffset(currentPos)
+                                    handePosition.moveTo(currentPos)
                                 }
                             }
                         } while (drag != null && !drag.anyPositionChangeConsumed())
@@ -129,7 +128,7 @@ internal fun Modifier.twoDirectionsDragProcess(
                                     (it.position - down.position) + handePosition.offset
                                 )
                                 launch {
-                                    handePosition.setOffset(currentPos)
+                                    handePosition.moveTo(currentPos)
                                 }
                             }
                         }
@@ -175,7 +174,7 @@ private fun Modifier.handleTapGestures(
             coroutineScope {
                 detectTapGestures {
                     launch {
-                        handlePosition.moveTo(coerceInCircle(it))
+                        handlePosition.smoothMoveTo(coerceInCircle(it))
                     }
                 }
             }
