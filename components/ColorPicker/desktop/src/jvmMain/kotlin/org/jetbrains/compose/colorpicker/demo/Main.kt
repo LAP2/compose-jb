@@ -3,6 +3,7 @@ package org.jetbrains.compose.colorpicker.demo
 import androidx.compose.desktop.DesktopTheme
 import androidx.compose.desktop.Window
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,11 +13,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -27,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Blue
 import androidx.compose.ui.graphics.Color.Companion.Green
 import androidx.compose.ui.graphics.Color.Companion.Red
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.colorpicker.ColorPicker
 import org.jetbrains.compose.colorpicker.ColorPickerState
@@ -67,6 +74,42 @@ private fun ColorBox(
 )
 
 @Composable
+private fun SelectionWrapper(
+    slot: @Composable () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .border(
+                3.dp,
+                MaterialTheme.colors.background
+            ),
+        content = {slot()}
+    )
+}
+
+@Composable
+private fun SelectableListItem(
+    onSelection: () -> Unit,
+    selected: Boolean,
+    itemContent: @Composable () -> Unit
+) {
+    Box(
+        Modifier
+            .selectable(
+                selected,
+            ) {
+                onSelection()
+            }
+    ) {
+        if (selected) {
+            SelectionWrapper(itemContent)
+        } else {
+            itemContent()
+        }
+    }
+}
+
+@Composable
 private fun ColorsList(
     state: ColorsListState
 ) {
@@ -79,8 +122,16 @@ private fun ColorsList(
         horizontalArrangement = spacedBy(3.dp),
         verticalAlignment = CenterVertically
     ) {
-        items(state.colors) {
-            ColorBox(it)
+        itemsIndexed(state.colors) { index, color ->
+            SelectableListItem(
+                {
+                    state.onClick(color)
+                    state.selectedColorIndex.value = index
+                },
+                state.selectedColorIndex.value == index
+            ) {
+                ColorBox(color)
+            }
         }
     }
 }
@@ -98,6 +149,12 @@ fun main() = Window(
                 ) {
                     state.color = it
                 }
+            }
+            if (
+                colorListState.selectedColor != null
+                && colorListState.selectedColor != state.color
+            ) {
+                colorListState.colors[colorListState.selectedColorIndex.value] = state.color
             }
             Column {
                 ColorsList(colorListState)

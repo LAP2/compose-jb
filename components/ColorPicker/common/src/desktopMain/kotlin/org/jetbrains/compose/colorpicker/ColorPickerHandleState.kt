@@ -8,7 +8,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import java.awt.Color.HSBtoRGB
 import java.awt.Color.RGBtoHSB
+import kotlin.math.absoluteValue
 import kotlin.math.acos
+import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -28,21 +30,34 @@ internal class ColorToOffsetBiDirectionalConverter(
 ) {
     @Suppress("NOTHING_TO_INLINE")
     inline fun Offset.toColor(): Color {
-        return Color(
+        val currentRelativePoint = this - colorCircleCenter
+        val currentRadius = with(currentRelativePoint.pow(2)) { sqrt(x + y) }
+        val hue = with(currentRelativePoint) {
+            if (y < 0) {
+                val dav = Math.toDegrees(asin(y / currentRadius).toDouble()).absoluteValue
+                if (x < 0) { 180 + dav } else { 360 - dav }
+            } else {
+                Math.toDegrees(acos(x / currentRadius).toDouble())
+            } / 360
+        }.toFloat()
+        val color =  Color(
             HSBtoRGB(
-                Math.toDegrees(acos(x).toDouble()).toFloat(),
-                with(this.pow(2)) { sqrt(x + y) / colorCircleRadius},
+                hue,
+                currentRadius / colorCircleRadius,
                 brightness
             )
         )
+        println(color)
+        return color
     }
 
     @Suppress("NOTHING_TO_INLINE")
     inline fun Color.toOffset(): Offset {
+        println(this)
         val hsb = RGBtoHSB(
-            red.roundToInt(),
-            green.roundToInt(),
-            blue.roundToInt(),null
+            (red*255).roundToInt(),
+            (green*255).roundToInt(),
+            (blue*255).roundToInt(),null
         )
         val angle = hsb[0] * 360
         val radius = hsb[1] * colorCircleRadius
@@ -85,10 +100,12 @@ internal class ColorPickerHandleState(
     }
 
     suspend fun moveToColor(target: Color) {
+        println("moved")
         animatableOffset.animateTo(
             target.toOffset(),
             animationSpec = animationSpec
         )
+        println("color installed")
         producedColor = target
     }
 

@@ -3,6 +3,7 @@ package org.jetbrains.compose.colorpicker
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Transparent
@@ -29,4 +30,6 @@ private class ColorPickerStateImpl(
 fun rememberColorPickerState(
     color: Color = Transparent,
     brightness: Float = 1f
-): ColorPickerState = ColorPickerStateImpl(color,brightness)
+): ColorPickerState = remember {
+    ColorPickerStateImpl(color,brightness)
+}
