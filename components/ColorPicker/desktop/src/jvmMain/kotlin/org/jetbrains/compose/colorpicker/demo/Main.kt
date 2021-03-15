@@ -23,6 +23,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -130,7 +131,9 @@ private fun ColorsList(
                 },
                 state.selectedColorIndex.value == index
             ) {
-                ColorBox(color)
+                key(color) {
+                    ColorBox(color)
+                }
             }
         }
     }
