@@ -40,20 +40,17 @@ internal class ColorToOffsetBiDirectionalConverter(
                 Math.toDegrees(acos(x / currentRadius).toDouble())
             } / 360
         }.toFloat()
-        val color =  Color(
+        return Color(
             HSBtoRGB(
                 hue,
                 currentRadius / colorCircleRadius,
                 brightness
             )
         )
-        println(color)
-        return color
     }
 
     @Suppress("NOTHING_TO_INLINE")
     inline fun Color.toOffset(): Offset {
-        println(this)
         val hsb = RGBtoHSB(
             (red*255).roundToInt(),
             (green*255).roundToInt(),
@@ -100,12 +97,10 @@ internal class ColorPickerHandleState(
     }
 
     suspend fun moveToColor(target: Color) {
-        println("moved")
         animatableOffset.animateTo(
             target.toOffset(),
             animationSpec = animationSpec
         )
-        println("color installed")
         producedColor = target
     }
 
