@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +18,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -31,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush.Companion.horizontalGradient
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion.Black
 import androidx.compose.ui.graphics.Color.Companion.Blue
 import androidx.compose.ui.graphics.Color.Companion.Green
 import androidx.compose.ui.graphics.Color.Companion.Red
@@ -153,19 +156,33 @@ fun main() = Window(
                     state.color = it
                 }
             }
-            if (
-                colorListState.selectedColor != null
-                && colorListState.selectedColor != state.color
-            ) {
+            if (colorListState.selectedColor != null && colorListState.selectedColor != state.color) {
                 colorListState.colors[colorListState.selectedColorIndex.value] = state.color
             }
             Column {
                 ColorsList(colorListState)
                 GradientLine(colorListState.colors)
-                Box(Modifier.fillMaxSize()) {
-                    ColorPicker(
-                        Modifier.fillMaxSize(),
-                        state
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+//                        .border(3.dp, Black)
+                ) {
+                    Box(
+                        Modifier
+                            .padding(10.dp)
+                            .weight(1f)
+//                            .border(3.dp, Black)
+                    ) {
+                        ColorPicker(
+                            Modifier.fillMaxSize(),
+                            state
+                        )
+                    }
+                    Slider(
+                        value = state.brightness,
+                        onValueChange = {state.brightness = it},
+                        modifier = Modifier
+                            .weight(1f)
                     )
                 }
             }
