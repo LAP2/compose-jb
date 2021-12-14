@@ -129,24 +129,21 @@ internal fun measureDataGrid(
     // TODO composing backward here or we possibly should check borders better
 
     // Composing cells forward
-    /* TODO There should be more complex measurement logic
-    *   unfortunately we should provide concept of row and column during data table
-    *   cell measurements cause sizes of next or previous values could be dependent
-    *   on other cells measured before or after and there should be remeasures for them
-    * */
     while (viewportHeightUsed <= viewportHeight && row.rowIndex < rowsCount) {
         /* TODO check minimum offset from both sides
         *   This mean if composable at all
         * */
         val measuredCells = mutableListOf<LazyMeasuredCell>()
         /// start of columns measuring
-        while (viewportWidthUsed <= viewportWidth && column.columnIndex < columnsCount) {
-            with (cells[row,column]) {
+        var usedColumn = column
+        while (viewportWidthUsed <= viewportWidth && usedColumn.columnIndex < columnsCount) {
+            with (cells[row,usedColumn]) {
                 viewportWidthUsed += size.width
                 measuredCells += this
-                column++
+                usedColumn++
             }
         }
+        usedColumn = column
         viewportWidthUsed = initialViewportWidth
         val rowHeight = measuredCells.first().size.height
         viewportHeightUsed += rowHeight

@@ -1,5 +1,6 @@
 package org.jetbrains.compose.datatable
 
+import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.SubcomposeMeasureScope
 import androidx.compose.ui.unit.Constraints
@@ -11,10 +12,7 @@ import androidx.compose.ui.util.fastForEach
 import org.jetbrains.compose.datatable.model.CellPosition
 import org.jetbrains.compose.datatable.model.Column
 import org.jetbrains.compose.datatable.model.Row
-import org.jetbrains.compose.state.ColumnWidth
-import org.jetbrains.compose.state.Measured
-import org.jetbrains.compose.state.NeedMeasure
-import org.jetbrains.compose.state.RowHeight
+import org.jetbrains.compose.state.*
 
 internal class LazyMeasuredCell(
     override val position: CellPosition,
@@ -80,43 +78,54 @@ internal class LazyMeasuredCellProvider(
 
     val childConstraints = Constraints()
 
-    private val CellPosition.height: Int
-        get() =
-            when (val height = rowHeight[row]) {
-                is Measured -> height.size
+    private data class CellConstraints(
+        val width: WidthSetter? = null,
+        val height: HeightSetter? = null,
+        val constraints: Constraints
+    )
+
+    private fun cellConstraints(position: CellPosition): CellConstraints {
+        return with(position) {
+            val width = columnWidth[column]
+            when(val height = rowHeight[row]) {
+                is Measured -> {
+                    when(width) {
+                        is Measured -> CellConstraints(
+                            constraints = Constraints.fixed(width.size, height.size)
+                        )
+                        is NeedMeasure -> CellConstraints(
+                            width = width.setter,
+                            constraints = Constraints.fixedHeight(height.size)
+                        )
+                    }
+                }
                 is NeedMeasure -> {
-                    // TODO setup callback
-                    Infinity
+                    when(width) {
+                        is Measured -> CellConstraints(
+                            height = height.setter,
+                            constraints = Constraints.fixedWidth(width.size)
+                        )
+                        is NeedMeasure -> CellConstraints(
+                            width = width.setter,
+                            height = height.setter,
+                            constraints = Constraints()
+                        )
+                    }
                 }
-            }
-
-    private val CellPosition.width: Int
-        get() =
-            when(val width = columnWidth[column]) {
-                is Measured -> width.size
-                is NeedMeasure -> {
-                    // TODO setup callback
-                    Infinity
-                }
-            }
-
-    private fun cellConstraints(position: CellPosition): Constraints =
-        with(position) {
-            val width = width
-            val height = height
-
-            Constraints().let {
-                if (width < Infinity) {
-                    it.copy(minWidth = width, maxWidth = width)
-                } else {
-                    it
-                }
-            }.let {
-                if (height < Infinity) {
-                    it.copy(minHeight = height, maxHeight = height)
-                } else it
             }
         }
+    }
+
+
+    private fun Measurable.measure(
+        position: CellPosition
+    ): Placeable {
+        val constraints = cellConstraints(position)
+        val placeable = measure(constraints.constraints)
+        constraints.height?.invoke(placeable.height)
+        constraints.width?.invoke(placeable.width)
+        return placeable
+    }
 
 
     fun getAndMeasure(
@@ -130,8 +139,7 @@ internal class LazyMeasuredCellProvider(
             .createPlaceable(
                 position,
                 key,
-                measurables[CELL_CONTENT_ROOT_COUNT - 1]
-                    .measure(cellConstraints(position))
+                measurables[CELL_CONTENT_ROOT_COUNT - 1].measure(position)
             )
     }
 
@@ -139,3 +147,7 @@ internal class LazyMeasuredCellProvider(
 
     operator fun get(row: Row, column: Column): LazyMeasuredCell = get(CellPosition(row, column))
 }
+
+private typealias HeightSetter = (height: Int)->Unit
+
+private typealias WidthSetter = (width: Int)->Unit

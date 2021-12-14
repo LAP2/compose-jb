@@ -20,6 +20,9 @@ import org.jetbrains.compose.datatable.model.CellPosition
 import org.jetbrains.compose.datatable.model.GridSize
 import org.jetbrains.compose.state.DataGridState
 import org.jetbrains.compose.state.StateTestFun
+import kotlin.math.roundToInt
+import kotlin.random.Random
+import kotlin.random.nextInt
 
 fun main() = application {
     val state = remember { DataGridState() }
@@ -56,13 +59,8 @@ fun main() = application {
 
 private data class DefaultLazyKey(private val cellPosition: CellPosition)
 
-private class GroupContent(
-    val key: ((position: CellPosition) -> Any)?,
-    val content: Nothing
-)
-
 private class TestCellsProvider(
-    override val gridSize: GridSize = GridSize(1000,1000)
+    override val gridSize: GridSize = GridSize(1000, 10)
 ) : DataGridCellProvider {
 
 
@@ -79,23 +77,10 @@ private class TestCellsProvider(
         return {     Box(
             modifier = Modifier
                 .size(
-                    width = 200.dp,
-                    height = 50.dp
+                    width = Random.nextInt(100..200).dp,
+                    height = Random.nextInt(20..60).dp
                 )
                 .background(Color.Red)
         ) }
     }
-}
-
-@Preview
-@Composable
-fun CC() {
-    Box(
-        modifier = Modifier
-            .size(
-                width = 200.dp,
-                height = 50.dp
-            )
-            .background(Color.Red)
-    )
 }
